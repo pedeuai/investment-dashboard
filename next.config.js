@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['yahoo-finance2'],
+  allowedDevOrigins: ['192.168.158.11'],
   images: {
     remotePatterns: [
       {
@@ -30,6 +31,9 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react']
   },
 };
 

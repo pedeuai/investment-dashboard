@@ -1,8 +1,10 @@
 'use server';
 
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { yahooSymbols } from '@/data/portfolio';
 import { PriceData, DividendEvent } from '@/types';
+
+const yahooFinance = new YahooFinance();
 
 interface YahooQuote {
   symbol?: string;
@@ -55,7 +57,7 @@ export async function fetchPrices(symbols: string[]): Promise<Record<string, Pri
     const quotes = await yahooFinance.quote(validSymbols);
     const quoteArray = Array.isArray(quotes) ? quotes : [quotes];
 
-    quoteArray.forEach((quote: YahooQuote) => {
+    quoteArray.forEach((quote) => {
       if (quote.symbol && quote.regularMarketPrice) {
         const originalSymbol = Object.keys(yahooSymbols).find(
           k => yahooSymbols[k] === quote.symbol
@@ -83,8 +85,24 @@ export async function fetchHistoricalData(
 ) {
   const yahooSymbol = yahooSymbols[symbol] || `${symbol}.SA`;
   
+  const periodMap: Record<string, { period1: string; period2: string }> = {
+    '1d': { period1: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '5d': { period1: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '1mo': { period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '3mo': { period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '6mo': { period1: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '1y': { period1: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '2y': { period1: new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '5y': { period1: new Date(Date.now() - 1825 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    '10y': { period1: new Date(Date.now() - 3650 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    'ytd': { period1: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], period2: new Date().toISOString().split('T')[0] },
+    'max': { period1: '1970-01-01', period2: new Date().toISOString().split('T')[0] },
+  };
+  
+  const { period1, period2 } = periodMap[period] || periodMap['1y'];
+  
   try {
-    const data = await yahooFinance.chart(yahooSymbol, { period }) as YahooChartData;
+    const data = await yahooFinance.chart(yahooSymbol, { period1, period2 }) as YahooChartData;
     return data.quotes?.map((q: YahooChartQuote) => ({
       date: q.date?.toISOString().split('T')[0] || '',
       value: q.close || q.adjclose || 0,
