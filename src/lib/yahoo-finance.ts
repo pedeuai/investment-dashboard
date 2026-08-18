@@ -2,7 +2,7 @@
 
 import yahooFinance from 'yahoo-finance2';
 import { yahooSymbols } from '@/data/portfolio';
-import { PriceData } from '@/types';
+import { PriceData, DividendEvent } from '@/types';
 
 interface YahooQuote {
   symbol?: string;
@@ -26,8 +26,20 @@ interface YahooSummaryDetail {
   trailingAnnualDividendRate?: number;
 }
 
+interface YahooCalendarEvents {
+  exDividendDate?: Date;
+  dividendDate?: Date;
+}
+
+interface YahooDefaultKeyStatistics {
+  lastDividendValue?: number;
+  lastDividendDate?: Date;
+}
+
 interface YahooQuoteSummary {
   summaryDetail?: YahooSummaryDetail;
+  calendarEvents?: YahooCalendarEvents;
+  defaultKeyStatistics?: YahooDefaultKeyStatistics;
 }
 
 export async function fetchPrices(symbols: string[]): Promise<Record<string, PriceData>> {
@@ -96,4 +108,97 @@ export async function fetchDividends(symbol: string) {
     console.error(`Error fetching dividends for ${symbol}:`, error);
     return { dividendYield: 0, trailingAnnualDividendRate: 0 };
   }
+}
+
+export async function fetchDividendCalendar(symbols: string[]): Promise<Record<string, DividendEvent[]>> {
+  const results: Record<string, DividendEvent[]> = {};
+
+  if (symbols.length === 0) return results;
+
+  const promises = symbols.map(async (symbol) => {
+    const yahooSymbol = yahooSymbols[symbol] || `${symbol}.SA`;
+    
+    try {
+      const data = await yahooFinance.quoteSummary(yahooSymbol, { 
+        modules: ['calendarEvents', 'summaryDetail', 'defaultKeyStatistics'] 
+      }) as YahooQuoteSummary;
+
+      const events: DividendEvent[] = [];
+      
+      if (data.calendarEvents?.exDividendDate || data.calendarEvents?.dividendDate) {
+        const exDate = data.calendarEvents.exDividendDate 
+          ? data.calendarEvents.exDividendDate.toISOString().split('T')[0]
+          : '';
+        const payDate = data.calendarEvents.dividendDate
+          ? data.calendarEvents.dividendDate.toISOString().split('T')[0]
+          : '';
+        
+        const amount = data.defaultKeyStatistics?.lastDividendValue || 0;
+        const trailingRate = data.summaryDetail?.trailingAnnualDividendRate || 0;
+        const dividendYield = data.summaryDetail?.dividendYield || 0;
+
+        if (exDate || payDate) {
+          events.push({
+            symbol,
+            name: symbol,
+            exDate: exDate || payDate,
+            payDate: payDate || exDate,
+            amount: amount > 0 ? amount : (trailingRate > 0 ? trailingRate / 12 : 0),
+            type: 'dividend',
+            source: 'yahoo',
+            trailingAnnualRate: trailingRate,
+            dividendYield,
+          });
+        }
+      }
+
+      results[symbol] = events;
+    } catch (error) {
+      console.error(`Error fetching dividend calendar for ${symbol}:`, error);
+      results[symbol] = [];
+    }
+  });
+
+  await Promise.allSettled(promises);
+  return results;
+}
+
+export async function fetchDividendProjection(
+  positions: Array<{ symbol: string; name: string; quantity: number; currentPrice: number }>
+): Promise<Array<{
+  symbol: string;
+  name: string;
+  quantity: number;
+  currentPrice: number;
+  trailingAnnualRate: number;
+  dividendYield: number;
+  projectedMonthly: number;
+  projectedAnnual: number;
+  nextExDate?: string;
+  nextPayDate?: string;
+}>> {
+  const symbols = positions.map(p => p.symbol);
+  const calendar = await fetchDividendCalendar(symbols);
+
+  return positions.map((pos) => {
+    const events = calendar[pos.symbol] || [];
+    const nextEvent = events[0];
+    const trailingRate = nextEvent?.trailingAnnualRate || 0;
+    const dividendYield = nextEvent?.dividendYield || 0;
+    const projectedAnnual = pos.quantity * trailingRate;
+    const projectedMonthly = projectedAnnual / 12;
+
+    return {
+      symbol: pos.symbol,
+      name: pos.name,
+      quantity: pos.quantity,
+      currentPrice: pos.currentPrice,
+      trailingAnnualRate: trailingRate,
+      dividendYield,
+      projectedMonthly,
+      projectedAnnual,
+      nextExDate: nextEvent?.exDate,
+      nextPayDate: nextEvent?.payDate,
+    };
+  });
 }

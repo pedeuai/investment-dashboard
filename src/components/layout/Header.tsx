@@ -2,10 +2,10 @@
 
 import { usePortfolio } from '@/context/PortfolioContext';
 import { Button } from '@/components/ui/Button';
-import { RefreshCw, Save, RotateCcw } from 'lucide-react';
+import { RefreshCw, RotateCcw, DollarSign } from 'lucide-react';
 
 export function Header() {
-  const { refreshPrices, resetToDefault, isLoading } = usePortfolio();
+  const { refreshPrices, resetToDefault, isLoading, refreshDividends, dividendsLoading } = usePortfolio();
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
@@ -21,6 +21,10 @@ export function Header() {
             <Button variant="outline" size="sm" onClick={refreshPrices} loading={isLoading}>
               <RefreshCw className="h-4 w-4" />
               Atualizar Preços
+            </Button>
+            <Button variant="outline" size="sm" onClick={refreshDividends} loading={dividendsLoading}>
+              <DollarSign className="h-4 w-4" />
+              Atualizar Dividendos
             </Button>
             <Button variant="outline" size="sm" onClick={resetToDefault}>
               <RotateCcw className="h-4 w-4" />

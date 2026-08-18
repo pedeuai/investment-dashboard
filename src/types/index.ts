@@ -57,3 +57,49 @@ export interface PortfolioSnapshot {
   totalValue: number;
   positions: Position[];
 }
+
+export type DividendType = 'dividend' | 'jcp' | 'interest' | 'amortizacao';
+
+export interface DividendEvent {
+  symbol: string;
+  name: string;
+  exDate: string;
+  payDate: string;
+  amount: number;
+  type: DividendType;
+  source: 'yahoo' | 'brapi';
+  trailingAnnualRate?: number;
+  dividendYield?: number;
+}
+
+export interface DividendProjection {
+  symbol: string;
+  name: string;
+  quantity: number;
+  currentPrice: number;
+  trailingAnnualRate: number;
+  dividendYield: number;
+  projectedMonthly: number;
+  projectedAnnual: number;
+  nextExDate?: string;
+  nextPayDate?: string;
+}
+
+export interface DividendCalendarMonth {
+  monthKey: string;
+  label: string;
+  events: DividendEvent[];
+  totalProjected: number;
+}
+
+export interface DividendHistoryEntry {
+  id: string;
+  symbol: string;
+  name: string;
+  date: string;
+  amount: number;
+  total: number;
+  type: DividendType;
+  notes?: string;
+  createdAt: string;
+}

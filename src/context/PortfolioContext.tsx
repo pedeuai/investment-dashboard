@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Position, PortfolioSummary } from '@/types';
+import { Position, PortfolioSummary, DividendCalendarMonth, DividendProjection, DividendHistoryEntry, DividendType } from '@/types';
 import { initialPositions } from '@/data/portfolio';
 
 interface PortfolioContextType {
@@ -14,11 +14,20 @@ interface PortfolioContextType {
   updatePosition: (id: string, updates: Partial<Position>) => void;
   deletePosition: (id: string) => void;
   resetToDefault: () => void;
+  dividendCalendar: DividendCalendarMonth[];
+  dividendProjection: DividendProjection[];
+  dividendHistory: DividendHistoryEntry[];
+  dividendsLoading: boolean;
+  dividendsError: string | null;
+  refreshDividends: () => Promise<void>;
+  addDividendHistory: (entry: Omit<DividendHistoryEntry, 'id' | 'createdAt'>) => void;
+  deleteDividendHistory: (id: string) => void;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'investment-portfolio';
+const DIVIDEND_HISTORY_KEY = 'dividend-history';
 
 function calculateSummary(positions: Position[]): PortfolioSummary {
   const totalInvested = positions.reduce((sum, p) => sum + p.investedAmount, 0);
@@ -46,25 +55,47 @@ function calculateSummary(positions: Position[]): PortfolioSummary {
 }
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
-  const [positions, setPositions] = useState<Position[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return initialPositions;
-        }
-      }
-    }
-    return initialPositions;
-  });
+  const [positions, setPositions] = useState<Position[]>(initialPositions);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dividendCalendar, setDividendCalendar] = useState<DividendCalendarMonth[]>([]);
+  const [dividendProjection, setDividendProjection] = useState<DividendProjection[]>([]);
+  const [dividendHistory, setDividendHistory] = useState<DividendHistoryEntry[]>([]);
+  const [dividendsLoading, setDividendsLoading] = useState(false);
+  const [dividendsError, setDividendsError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
-  }, [positions]);
+    setMounted(true);
+    const storedPositions = localStorage.getItem(STORAGE_KEY);
+    if (storedPositions) {
+      try {
+        setPositions(JSON.parse(storedPositions));
+      } catch {
+        setPositions(initialPositions);
+      }
+    }
+    const storedHistory = localStorage.getItem(DIVIDEND_HISTORY_KEY);
+    if (storedHistory) {
+      try {
+        setDividendHistory(JSON.parse(storedHistory));
+      } catch {
+        setDividendHistory([]);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+    }
+  }, [positions, mounted]);
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(DIVIDEND_HISTORY_KEY, JSON.stringify(dividendHistory));
+    }
+  }, [dividendHistory, mounted]);
 
   const summary = calculateSummary(positions);
 
@@ -108,6 +139,28 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     }
   }, [positions]);
 
+  const refreshDividends = useCallback(async () => {
+    setDividendsLoading(true);
+    setDividendsError(null);
+    try {
+      const response = await fetch('/api/dividends/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch dividends');
+      
+      const data = await response.json();
+      setDividendCalendar(data.calendar || []);
+      setDividendProjection(data.projection || []);
+    } catch (err) {
+      setDividendsError('Erro ao buscar dividendos. Tente novamente.');
+      console.error(err);
+    } finally {
+      setDividendsLoading(false);
+    }
+  }, []);
+
   const addPosition = useCallback((position: Omit<Position, 'id'>) => {
     const newPosition: Position = {
       ...position,
@@ -128,6 +181,19 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setPositions(initialPositions);
   }, []);
 
+  const addDividendHistory = useCallback((entry: Omit<DividendHistoryEntry, 'id' | 'createdAt'>) => {
+    const newEntry: DividendHistoryEntry = {
+      ...entry,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    setDividendHistory(prev => [newEntry, ...prev]);
+  }, []);
+
+  const deleteDividendHistory = useCallback((id: string) => {
+    setDividendHistory(prev => prev.filter(h => h.id !== id));
+  }, []);
+
   return (
     <PortfolioContext.Provider value={{
       positions,
@@ -139,6 +205,14 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       updatePosition,
       deletePosition,
       resetToDefault,
+      dividendCalendar,
+      dividendProjection,
+      dividendHistory,
+      dividendsLoading,
+      dividendsError,
+      refreshDividends,
+      addDividendHistory,
+      deleteDividendHistory,
     }}>
       {children}
     </PortfolioContext.Provider>
