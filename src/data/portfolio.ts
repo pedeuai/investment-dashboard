@@ -22,7 +22,7 @@ export const initialPositions: Position[] = [
   { id: '10', symbol: 'PVBI11', name: 'VBI Prime Properties', type: 'fii', category: 'office_fii', quantity: 700, avgPrice: 100, investedAmount: 70000 },
 
   // FIIs - Fundos de Fundos
-  { id: '11', symbol: 'HGFF11', name: 'HGFF11', type: 'fii', category: 'fof_fii', quantity: 350, avgPrice: 100, investedAmount: 35000 },
+  { id: '11', symbol: 'HGBS11', name: 'HGBS FII', type: 'fii', category: 'fof_fii', quantity: 350, avgPrice: 100, investedAmount: 35000 },
   { id: '12', symbol: 'ALZR11', name: 'Alianza Trust Renda Imobiliária', type: 'fii', category: 'fof_fii', quantity: 350, avgPrice: 100, investedAmount: 35000 },
 
   // Ações - Elétrico
@@ -51,7 +51,7 @@ export const yahooSymbols: Record<string, string> = {
   'XPML11': 'XPML11.SA',
   'VISC11': 'VISC11.SA',
   'PVBI11': 'PVBI11.SA',
-  'HGFF11': 'HGFF11.SA',
+  'HGBS11': 'HGBS11.SA',
   'ALZR11': 'ALZR11.SA',
   'TAEE11': 'TAEE11.SA',
   'CPFE3': 'CPFE3.SA',

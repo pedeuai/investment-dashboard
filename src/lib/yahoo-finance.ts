@@ -6,6 +6,99 @@ import { PriceData, DividendEvent } from '@/types';
 
 const yahooFinance = new YahooFinance();
 
+interface HGBrasilQuote {
+  symbol: string;
+  price: number;
+  change: number;
+  change_percent: number;
+  updated_at: string;
+}
+
+interface HGBrasilResponse {
+  by: string;
+  valid_key: boolean;
+  results: HGBrasilQuote | { error: boolean; message: string };
+  execution_time: number;
+  from_cache: boolean;
+}
+
+async function fetchHGBrasilPrice(symbol: string): Promise<PriceData | null> {
+  const apiKey = process.env.HGBRASIL_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.hgbrasil.com/finance/stock_price?key=${apiKey}&symbol=${symbol}`,
+      { next: { revalidate: 300 } }
+    );
+    const data: HGBrasilResponse = await response.json();
+
+    if (data.valid_key && data.results && !('error' in data.results)) {
+      const quote = data.results as HGBrasilQuote;
+      return {
+        symbol,
+        price: quote.price,
+        change: quote.change,
+        changePercent: quote.change_percent,
+        timestamp: quote.updated_at,
+      };
+    }
+  } catch (error) {
+    console.error(`Error fetching HG Brasil price for ${symbol}:`, error);
+  }
+  return null;
+}
+
+interface AlphaVantageQuote {
+  '01. symbol': string;
+  '02. open': string;
+  '03. high': string;
+  '04. low': string;
+  '05. price': string;
+  '06. volume': string;
+  '07. latest trading day': string;
+  '08. previous close': string;
+  '09. change': string;
+  '10. change percent': string;
+}
+
+interface AlphaVantageResponse {
+  'Global Quote': AlphaVantageQuote;
+  'Error Message'?: string;
+  Information?: string;
+}
+
+async function fetchAlphaVantagePrice(symbol: string): Promise<PriceData | null> {
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch(
+      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}.SA&apikey=${apiKey}`,
+      { next: { revalidate: 300 } }
+    );
+    const data: AlphaVantageResponse = await response.json();
+
+    if (data['Global Quote'] && data['Global Quote']['05. price']) {
+      const quote = data['Global Quote'];
+      const price = parseFloat(quote['05. price']);
+      const change = parseFloat(quote['09. change']);
+      const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
+      
+      return {
+        symbol,
+        price,
+        change,
+        changePercent,
+        timestamp: quote['07. latest trading day'],
+      };
+    }
+  } catch (error) {
+    console.error(`Error fetching Alpha Vantage price for ${symbol}:`, error);
+  }
+  return null;
+}
+
 interface YahooQuote {
   symbol?: string;
   regularMarketPrice?: number;
@@ -74,6 +167,30 @@ export async function fetchPrices(symbols: string[]): Promise<Record<string, Pri
     });
   } catch (error) {
     console.error('Error fetching prices:', error);
+  }
+
+  // Fallback to HG Brasil for symbols not found in Yahoo Finance
+  const missingSymbols = symbols.filter(s => !results[s]);
+  if (missingSymbols.length > 0) {
+    const hgPromises = missingSymbols.map(async (symbol) => {
+      const hgPrice = await fetchHGBrasilPrice(symbol);
+      if (hgPrice) {
+        results[symbol] = hgPrice;
+      }
+    });
+    await Promise.allSettled(hgPromises);
+  }
+
+  // Fallback to Alpha Vantage for symbols still not found
+  const stillMissing = symbols.filter(s => !results[s]);
+  if (stillMissing.length > 0) {
+    const avPromises = stillMissing.map(async (symbol) => {
+      const avPrice = await fetchAlphaVantagePrice(symbol);
+      if (avPrice) {
+        results[symbol] = avPrice;
+      }
+    });
+    await Promise.allSettled(avPromises);
   }
 
   return results;
