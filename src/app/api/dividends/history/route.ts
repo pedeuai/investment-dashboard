@@ -3,6 +3,17 @@ import { DividendHistoryEntry, DividendType } from '@/types';
 
 const STORAGE_KEY = 'dividend-history';
 
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 function getHistory(): DividendHistoryEntry[] {
   if (typeof window !== 'undefined') {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const history = getHistory();
     const newEntry: DividendHistoryEntry = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       symbol,
       name,
       date,

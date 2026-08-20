@@ -47,4 +47,25 @@ body {
   .dark .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: theme('colors.gray.600');
   }
+
+  :root {
+    --pulse-red-start: rgb(254 226 226);
+    --pulse-red-mid: rgb(252 165 165);
+  }
+  .dark {
+    --pulse-red-start: rgb(127 29 29 / 0.3);
+    --pulse-red-mid: rgb(185 28 28 / 0.5);
+  }
+
+  @keyframes pulse-red {
+    0%, 100% {
+      background-color: var(--pulse-red-start);
+    }
+    50% {
+      background-color: var(--pulse-red-mid);
+    }
+  }
+  .animate-pulse-red {
+    animation: pulse-red 1s ease-in-out infinite;
+  }
 }

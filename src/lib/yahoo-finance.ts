@@ -73,8 +73,10 @@ async function fetchAlphaVantagePrice(symbol: string): Promise<PriceData | null>
   if (!apiKey) return null;
 
   try {
+    // Use correct symbol format for Alpha Vantage (already has .SA for Brazilian stocks)
+    const avSymbol = symbol.endsWith('.SA') ? symbol : `${symbol}.SA`;
     const response = await fetch(
-      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}.SA&apikey=${apiKey}`,
+      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avSymbol}&apikey=${apiKey}`,
       { next: { revalidate: 300 } }
     );
     const data: AlphaVantageResponse = await response.json();

@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { AllocationCharts } from '@/components/dashboard/AllocationCharts';
 import { PositionsTable } from '@/components/dashboard/PositionsTable';
+import { OptionsTable } from '@/components/dashboard/OptionsTable';
 import { DividendTabs } from '@/components/dashboard/DividendTabs';
 
 export default function Dashboard() {
@@ -17,6 +18,7 @@ export default function Dashboard() {
             <SummaryCards />
             <AllocationCharts />
             <PositionsTable />
+            <OptionsTable />
             <DividendTabs />
           </div>
         </main>

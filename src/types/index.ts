@@ -1,4 +1,4 @@
-export type AssetType = 'stock' | 'fii' | 'etf' | 'fixed_income' | 'crypto';
+export type AssetType = 'stock' | 'fii' | 'etf' | 'fixed_income' | 'crypto' | 'option';
 
 export type AssetCategory = 
   | 'logistics_fii' 
@@ -11,7 +11,9 @@ export type AssetCategory =
   | 'sanitation_commodity_stock'
   | 'international_etf'
   | 'tesouro_selic'
-  | 'tesouro_ipca';
+  | 'tesouro_ipca'
+  | 'call_option'
+  | 'put_option';
 
 export interface Position {
   id: string;
@@ -22,6 +24,8 @@ export interface Position {
   quantity: number;
   avgPrice: number;
   investedAmount: number;
+  receivedAmount?: number; // For options: premium received when selling
+  expirationDate?: string; // For options: expiration date (YYYY-MM-DD)
   currentPrice?: number;
   currentValue?: number;
   pl?: number;

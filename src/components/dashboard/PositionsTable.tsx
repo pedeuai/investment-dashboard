@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { usePortfolio } from '@/context/PortfolioContext';
 import { typeLabels, categoryLabels, typeColors } from '@/data/portfolio';
-import { Search, Filter, ChevronUp, ChevronDown, Plus } from 'lucide-react';
+import { Search, Filter, ChevronUp, ChevronDown, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Position, AssetType, AssetCategory } from '@/types';
 
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }));
@@ -25,6 +25,7 @@ export function PositionsTable() {
   const [formData, setFormData] = useState<Partial<Position>>({});
 
   const filteredPositions = positions
+    .filter(p => p.type !== 'option')
     .filter(p => {
       const matchesSearch = p.symbol.toLowerCase().includes(search.toLowerCase()) ||
         p.name.toLowerCase().includes(search.toLowerCase());
@@ -84,6 +85,9 @@ export function PositionsTable() {
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const formatNumber = (value: number) => 
+    new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+
   const formatPercent = (value: number | undefined) =>
     value !== undefined ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%` : '--';
 
@@ -142,19 +146,17 @@ export function PositionsTable() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                {[
-                  { key: 'symbol', label: 'Ativo' },
-                  { key: 'name', label: 'Nome' },
-                  { key: 'type', label: 'Tipo' },
-                  { key: 'category', label: 'Categoria' },
-                  { key: 'quantity', label: 'Qtd.' },
-                  { key: 'avgPrice', label: 'Preço Médio' },
-                  { key: 'investedAmount', label: 'Investido' },
-                  { key: 'currentPrice', label: 'Preço Atual' },
-                  { key: 'currentValue', label: 'Valor Atual' },
-                  { key: 'pl', label: 'Lucro/Prejuízo' },
-                  { key: 'plPercent', label: '%' },
-                ].map(col => (
+{[
+                    { key: 'symbol', label: 'Ativo' },
+                    { key: 'name', label: 'Nome' },
+                    { key: 'type', label: 'Tipo' },
+                    { key: 'quantity', label: 'Qtd.' },
+                    { key: 'avgPrice', label: 'Preço Médio' },
+                    { key: 'investedAmount', label: 'Investido' },
+                    { key: 'currentValue', label: 'Valor Atual' },
+                    { key: 'pl', label: 'Lucro/Prejuízo' },
+                    { key: 'plPercent', label: '%' },
+                  ].map(col => (
                   <th
                     key={col.key}
                     className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white"
@@ -175,28 +177,24 @@ export function PositionsTable() {
               {filteredPositions.map(position => (
                 <tr key={position.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-3 font-mono font-medium text-gray-900 dark:text-white">{position.symbol}</td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-xs truncate">{position.name}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-[120px] text-[11px] leading-tight break-words">{position.name}</td>
                   <td className="px-4 py-3">
                     <Badge
                       variant="default"
-                      className="bg-[${typeColors[position.type]}]/10 text-[${typeColors[position.type]}] border border-[${typeColors[position.type]}]/20"
+                      className="bg-[${typeColors[position.type]}]/10 text-[${typeColors[position.type]}] border border-[${typeColors[position.type]}]/20 text-[9px]"
                     >
                       {typeLabels[position.type]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{categoryLabels[position.category]}</td>
                   <td className="px-4 py-3 font-mono text-gray-900 dark:text-white">{position.quantity.toLocaleString('pt-BR')}</td>
-                  <td className="px-4 py-3 font-mono text-gray-900 dark:text-white">{formatCurrency(position.avgPrice)}</td>
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900 dark:text-white">{formatCurrency(position.investedAmount)}</td>
-                  <td className="px-4 py-3 font-mono text-gray-900 dark:text-white">
-                    {position.currentPrice ? formatCurrency(position.currentPrice) : '--'}
-                  </td>
+                  <td className="px-4 py-3 font-mono text-gray-900 dark:text-white">{formatNumber(position.avgPrice)}</td>
+                  <td className="px-4 py-3 font-mono font-medium text-gray-900 dark:text-white">{formatNumber(position.investedAmount)}</td>
                   <td className="px-4 py-3 font-mono font-medium text-gray-900 dark:text-white">
-                    {position.currentValue ? formatCurrency(position.currentValue) : formatCurrency(position.investedAmount)}
+                    {position.currentValue ? formatNumber(position.currentValue) : formatNumber(position.investedAmount)}
                   </td>
                   <td className="px-4 py-3 font-mono">
                     {position.pl !== undefined ? (
-                      <span className={getPLColor(position.pl)}>{formatCurrency(position.pl)}</span>
+                      <span className={getPLColor(position.pl)}>{formatNumber(position.pl)}</span>
                     ) : '--'}
                   </td>
                   <td className="px-4 py-3 font-mono">
@@ -206,11 +204,11 @@ export function PositionsTable() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditModal(position)}>
-                        Editar
+                      <Button variant="ghost" size="sm" onClick={() => openEditModal(position)} className="p-1">
+                        <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deletePosition(position.id)} className="text-red-600 hover:text-red-700">
-                        Excluir
+                      <Button variant="ghost" size="sm" onClick={() => deletePosition(position.id)} className="text-red-600 hover:text-red-700 p-1">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </td>
@@ -218,7 +216,7 @@ export function PositionsTable() {
               ))}
               {filteredPositions.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                     Nenhum ativo encontrado
                   </td>
                 </tr>
